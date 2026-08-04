@@ -1,0 +1,1 @@
+start javaw --enable-native-access=javafx.graphics --module-path "C:\Program Files\Java\javafx-sdk-26.0.2\lib" --add-modules javafx.controls,javafx.fxml -jar "C:\Users\albertd\OneDrive - Hewlett Packard Enterprise\HPE\Kotlin\dataFX\build\libs\dataFX-1.0-SNAPSHOT.jar"

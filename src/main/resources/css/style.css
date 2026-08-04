@@ -1,0 +1,17 @@
+.root {
+    -fx-background-color: rgb(167, 205, 242, 0.8);
+}
+
+.button{
+    -fx-text-fill: Yellow;
+    -fx-font-family: 'Ink Free';
+    -fx-font-size: 18;
+    -fx-text-alignment: "center";
+    -fx-background-color: rgb(33, 85, 163,  0.8);
+}
+
+.label{
+    -fx-font-family: 'Ink Free';
+    -fx-font-size: 18;
+    -fx-text-fill: rgb(33, 85, 163, 0.8);
+}
