@@ -1,5 +1,7 @@
 package org.dba.datafx
 
+import com.mongodb.client.model.Accumulators
+import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.Projections
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.javafx.JavaFx
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.bson.BsonType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.FileInputStream
@@ -22,9 +25,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.time.LocalDate
+import java.time.Month
+import java.time.format.TextStyle
+import java.util.*
 
 
 class MainController {
+
+
+    @FXML
+    lateinit var monthComboBox: ComboBox<String>
 
     @FXML
     lateinit var fileColumn: TableColumn<UcidDetails, String>
@@ -36,7 +47,19 @@ class MainController {
     lateinit var ucidColumn: TableColumn<UcidDetails, String>
 
     @FXML
+    lateinit var productColumn: TableColumn<ProductCount, String>
+
+    @FXML
+    lateinit var countColumn: TableColumn<ProductCount, Int>
+
+    @FXML
     lateinit var ucidTableView: TableView<UcidDetails>
+
+    @FXML
+    lateinit var productTableView: TableView<ProductCount>
+
+    @FXML
+    lateinit var reportButton: Button
 
     @FXML
     lateinit var buttonDelete: Button
@@ -68,6 +91,9 @@ class MainController {
 
     @FXML
     lateinit var radio2025: RadioButton
+
+    @FXML
+    lateinit var yearTextField: TextField
 
     @FXML
     lateinit var opeTextField: TextField
@@ -103,6 +129,9 @@ class MainController {
     lateinit var tabOpportunity: Tab
 
     @FXML
+    lateinit var tabSummary: Tab
+
+    @FXML
     lateinit var labelJavaFX: Label
 
     @FXML
@@ -135,6 +164,15 @@ class MainController {
         ucidColumn.cellValueFactory = PropertyValueFactory("ucid")
         exportDateColumn.cellValueFactory = PropertyValueFactory("exportDate")
         fileColumn.cellValueFactory = PropertyValueFactory("fileName")
+
+        productColumn.cellValueFactory = PropertyValueFactory("product")
+        countColumn.cellValueFactory = PropertyValueFactory("count")
+
+        val months = Month.entries.map { it.getDisplayName(TextStyle.FULL, Locale.ENGLISH) }
+        monthComboBox.items = FXCollections.observableArrayList(months)
+        yearTextField.text = LocalDate.now().year.toString()
+
+        loadProducts()
 
     }
 
@@ -422,7 +460,7 @@ class MainController {
             .find(eq("ope", ope))
             .projection(
                 Projections.fields(
-                    Projections.include("ucid", "exportDate","fileName"),
+                    Projections.include("ucid", "exportDate", "fileName"),
                     Projections.excludeId()
                 )
             )
@@ -430,6 +468,79 @@ class MainController {
         return mongoResults.map { result ->
             UcidDetails(result.ucid, result.exportDate, result.fileName)
         }.sortedByDescending { it.exportDate }
+    }
+
+    @FXML
+    fun generateProductReport() {
+        val selectedMonthName = monthComboBox.value
+
+
+        if (selectedMonthName.isNullOrBlank()) {
+            productTableView.placeholder = Label("Please select a month and enter a year")
+            return
+        }
+
+        reportButton.isDisable = true
+        productTableView.items.clear()
+        productTableView.placeholder = Label("Loading report...")
+
+        controllerScope.launch {
+            try {
+                val results = withContext(Dispatchers.IO) {
+                    fetchProductCounts(selectedMonthName, currentYear)
+                }
+
+                productTableView.items = FXCollections.observableArrayList(results)
+                if (results.isEmpty()) {
+                    productTableView.placeholder = Label("No data found for the selected period.")
+                }
+
+            } catch (e: Exception) {
+                logger.error("Failed to generate product report", e)
+                productTableView.placeholder = Label("Error loading report. See logs for details.")
+            } finally {
+                // Re-enable the button
+                reportButton.isDisable = false
+            }
+        }
+    }
+
+    suspend fun fetchProductCounts(monthName: String, year: String): List<ProductCount> {
+
+        val monthNumber = Month.entries.first { it.getDisplayName(TextStyle.FULL, Locale.ENGLISH) == monthName }.value
+        val monthString = monthNumber.toString().padStart(2, '0')
+
+        // Create a regex to match dates like "YYYY-MM-DD"
+        val dateRegex = "^$year-$monthString-.*"
+
+        // Define the aggregation pipeline
+        val pipeline = listOf(
+            // Stage 1: Find documents that match the date AND have a non-null product field.
+            Aggregates.match(
+                Filters.and(
+                    Filters.regex("exportDate", dateRegex),
+                    Filters.type("product", BsonType.STRING),
+                )
+            ),
+            // Stage 2: Group by the 'product' field and count the items in each group
+            Aggregates.group("\$product", Accumulators.sum("count", 1)),
+            // Stage 3: Reshape the output to be more friendly
+            Aggregates.project(
+                Projections.fields(
+                    Projections.computed("product", $$"$_id"),
+                    Projections.include("count"),
+                    Projections.excludeId()
+                )
+            )
+        )
+
+        // Execute the pipeline and map the results to our UI data class
+        return MongoManage.collection
+            .aggregate<AggregationResult>(pipeline)
+            .toList()
+            .filter { it.product != null }
+            .map { ProductCount(it.product!!, it.count) } // Map to the TableView's data class
+            .sortedByDescending { it.count } // Sort for better presentation
     }
 
 
