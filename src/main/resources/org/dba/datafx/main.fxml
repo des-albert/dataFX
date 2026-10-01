@@ -10,7 +10,7 @@
 
     <Tab fx:id="tabMain" text="Main">
         <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="506.0" prefWidth="679.0">
-            <Button fx:id="buttonLoad" layoutX="341.0" layoutY="28.0" mnemonicParsing="false" onAction="#loadData"
+            <Button fx:id="buttonLoad" layoutX="341.0" layoutY="28.0" mnemonicParsing="false" onAction="#loadUCID"
                     text="Load Data"/>
             <Button fx:id="buttonStore" layoutX="866.0" layoutY="28.0" mnemonicParsing="false"
                     onAction="#storeConfigData" text="Store Configs"/>
@@ -46,7 +46,7 @@
                     <Font size="24.0"/>
                 </font>
             </Label>
-            <Button fx:id="buttonDelete" layoutX="580.0" layoutY="28.0" mnemonicParsing="false" onAction="#deleteData"
+            <Button fx:id="buttonDelete" layoutX="580.0" layoutY="28.0" mnemonicParsing="false" onAction="#deleteUCID"
                     text="Delete Data"/>
         </AnchorPane>
     </Tab>
@@ -81,6 +81,25 @@
             <ComboBox fx:id="monthComboBox" layoutX="534.0" layoutY="35.0" prefWidth="150.0" promptText="Select Month"/>
             <TextField fx:id="yearTextField" layoutX="303.0" layoutY="35.0" prefWidth="70.0" promptText="Year"/>
             <Button fx:id="reportButton" layoutX="763.0" layoutY="32.0" onAction="#generateProductReport"
+                    text="Generate"/>
+        </AnchorPane>
+    </Tab>
+    <Tab fx:id="tabProduct" text="Product">
+        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="450.0" prefWidth="1000.0">
+            <Label layoutX="146.0" layoutY="39.0" style="-fx-font-weight: bold;" text="Product Opportunities"/>
+            <TableView fx:id="opportunityTableView" layoutX="146.0" layoutY="104.0" prefHeight="534.0"
+                       prefWidth="692.0">
+                <columns>
+                    <TableColumn fx:id="opportunityColumn" prefWidth="120.0" text="Opportunity"/>
+                    <TableColumn fx:id="customerColumn" prefWidth="274.0" text="Customer"/>
+                    <TableColumn fx:id="ucidProductColumn" prefWidth="143.0" text="UCID"/>
+                    <TableColumn fx:id="productDateColumn" prefWidth="151.0" text="Date"/>
+                </columns>
+            </TableView>
+            <ComboBox fx:id="productComboBox" layoutX="534.0" layoutY="35.0" prefWidth="150.0"
+                      promptText="Select Product"/>
+            <TextField fx:id="productYearTextField" layoutX="303.0" layoutY="35.0" prefWidth="70.0" promptText="Year"/>
+            <Button fx:id="productButton" layoutX="763.0" layoutY="32.0" onAction="#generateOpportunityReport"
                     text="Generate"/>
         </AnchorPane>
     </Tab>

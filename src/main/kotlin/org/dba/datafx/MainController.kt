@@ -1,10 +1,7 @@
 package org.dba.datafx
 
-import com.mongodb.client.model.Accumulators
-import com.mongodb.client.model.Aggregates
-import com.mongodb.client.model.Filters
+import com.mongodb.client.model.*
 import com.mongodb.client.model.Filters.eq
-import com.mongodb.client.model.Projections
 import javafx.application.Platform
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
@@ -33,6 +30,33 @@ import java.util.*
 
 class MainController {
 
+
+    @FXML
+    lateinit var productYearTextField: TextField
+
+    @FXML
+    lateinit var productButton: Button
+
+    @FXML
+    lateinit var productComboBox: ComboBox<String>
+
+    @FXML
+    lateinit var ucidProductColumn: TableColumn<ProductOpportunity, String>
+
+    @FXML
+    lateinit var customerColumn: TableColumn<ProductOpportunity, String>
+
+    @FXML
+    lateinit var opportunityColumn: TableColumn<ProductOpportunity, String>
+
+    @FXML
+    lateinit var productDateColumn: TableColumn<ProductOpportunity, String>
+
+    @FXML
+    lateinit var opportunityTableView: TableView<ProductOpportunity>
+
+    @FXML
+    lateinit var tabProduct: Tab
 
     @FXML
     lateinit var monthComboBox: ComboBox<String>
@@ -168,12 +192,18 @@ class MainController {
         productColumn.cellValueFactory = PropertyValueFactory("product")
         countColumn.cellValueFactory = PropertyValueFactory("count")
 
+        opportunityColumn.cellValueFactory = PropertyValueFactory("ope")
+        customerColumn.cellValueFactory = PropertyValueFactory("customer")
+        ucidProductColumn.cellValueFactory = PropertyValueFactory("ucid")
+        productDateColumn.cellValueFactory = PropertyValueFactory("exportDate")
+
+
         val months = Month.entries.map { it.getDisplayName(TextStyle.FULL, Locale.ENGLISH) }
         monthComboBox.items = FXCollections.observableArrayList(months)
         yearTextField.text = LocalDate.now().year.toString()
+        productYearTextField.text = LocalDate.now().year.toString()
 
         loadProducts()
-
     }
 
     @FXML
@@ -203,7 +233,7 @@ class MainController {
     }
 
     @FXML
-    fun loadData() {
+    fun loadUCID() {
         val ucidToFind = textFieldUCID.text
         if (ucidToFind.isBlank()) {
             textAreaResult.text = "Please enter a UCID to load."
@@ -239,7 +269,7 @@ class MainController {
     }
 
     @FXML
-    fun deleteData() {
+    fun deleteUCID() {
         val ucidToDelete = textFieldUCID.text
         if (ucidToDelete.isBlank()) {
             textAreaResult.text = "Please enter a UCID to load."
@@ -300,6 +330,8 @@ class MainController {
 
         products = loadProductList()
 
+        productComboBox.items.addAll(products)
+
         if (!Files.isDirectory(downloadPath)) {
             logger.error("Downloads directory not found: $downloadPath")
             withContext(Dispatchers.JavaFx) { textAreaResult.appendText("ERROR: Downloads directory not found.\n") }
@@ -348,8 +380,10 @@ class MainController {
             products = withContext(Dispatchers.IO) {
                 MongoManage.collection.distinct<String>("product", Filters.ne("product", null)).toList().sorted()
             }
-
+            productComboBox.items.setAll(products)
+            productComboBox.selectionModel.selectFirst()
         }
+
     }
 
 
@@ -474,7 +508,6 @@ class MainController {
     fun generateProductReport() {
         val selectedMonthName = monthComboBox.value
 
-
         if (selectedMonthName.isNullOrBlank()) {
             productTableView.placeholder = Label("Please select a month and enter a year")
             return
@@ -543,6 +576,79 @@ class MainController {
             .sortedByDescending { it.count } // Sort for better presentation
     }
 
+    @FXML
+    fun generateOpportunityReport() {
+        val selectedProduct = productComboBox.value
+
+        if (selectedProduct.isNullOrBlank()) {
+            opportunityTableView.placeholder = Label("Select a product.")
+            return
+        }
+
+        productButton.isDisable = true
+        opportunityTableView.items.clear()
+        opportunityTableView.placeholder = Label("Loading report...")
+
+        controllerScope.launch {
+            try {
+                val results: List<ProductOpportunity> =
+                    withContext(Dispatchers.IO) {
+                        fetchRecentUcidInfo(selectedProduct)
+
+                    }
+
+                opportunityTableView.items.setAll(results)
+
+                opportunityTableView.placeholder =
+                    Label(
+                        if (results.isEmpty()) {
+                            "No opportunities found."
+                        } else {
+                            ""
+                        }
+                    )
+
+            } catch (e: Exception) {
+                logger.error("Failed to generate product report", e)
+                opportunityTableView.placeholder = Label("Error loading report. See logs for details.")
+            } finally {
+                // Re-enable the button
+                productButton.isDisable = false
+            }
+        }
+
+    }
+
+    private suspend fun fetchRecentUcidInfo(product: String): List<ProductOpportunity> {
+        val pipeline = listOf(
+            Aggregates.match(eq("product", product)),
+
+            Aggregates.sort(Sorts.descending("exportDate")),
+
+            Aggregates.group(
+                "\$ope",
+                Accumulators.first("ope", "\$ope"),
+                Accumulators.first("ucid", "\$ucid"),
+                Accumulators.first("customer", "\$customer"),
+                Accumulators.first("exportDate", "\$exportDate")
+            ),
+            Aggregates.project(
+                Projections.fields(
+                    Projections.include("ope", "ucid", "customer", "exportDate"),
+                    Projections.excludeId()
+
+                )
+            ),
+
+            Aggregates.sort(
+                Sorts.descending("exportDate")
+            )
+        )
+        return MongoManage.collection
+            .withDocumentClass<ProductOpportunity>()
+            .aggregate(pipeline)
+            .toList()
+    }
 
     @FXML
     fun quit() {
