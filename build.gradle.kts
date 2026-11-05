@@ -35,7 +35,7 @@ javafx {
 }
 
 dependencies {
-    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.9.0")
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.11.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.apache.commons:commons-lang3:3.20.0")
