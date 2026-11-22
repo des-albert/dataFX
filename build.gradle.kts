@@ -1,7 +1,7 @@
 plugins {
     java
     application
-    id("org.jetbrains.kotlin.jvm") version "2.4.0"
+    id("org.jetbrains.kotlin.jvm") version "2.4.21"
     id("org.javamodularity.moduleplugin") version "2.0.1"
     id("org.openjfx.javafxplugin") version "0.1.0"
     id("org.beryx.jlink") version "4.1.0"
@@ -39,7 +39,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.apache.commons:commons-lang3:3.20.0")
-    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("org.apache.poi:poi-ooxml:6.0.0")
     implementation("org.slf4j:slf4j-simple:2.0.18")
     implementation("org.apache.logging.log4j:log4j-to-slf4j:2.26.1")
 
